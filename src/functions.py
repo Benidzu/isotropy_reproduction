@@ -18,6 +18,10 @@ def mean_pooling(inp_representations, representation_dev):
     sum_index = 0
     sent_representations = []
     for i in range(len(representation_dev)):
+        if len(representation_dev[i]) == 0:
+            sent_representations.append(
+                np.zeros(inp_representations[0].shape[0], dtype=np.float32))
+            continue
         sent_representations.append(np.mean(
             inp_representations[sum_index: sum_index + (len(representation_dev[i]))], axis=0))
         sum_index = sum_index + len(representation_dev[i])
