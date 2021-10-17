@@ -3,6 +3,7 @@
 data/
 src/Enhancement.ipynb
 src/*.csv
+src/*.txt
 src/data.150k.pickle
 paper.pdf
 README_old.md
