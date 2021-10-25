@@ -12,12 +12,46 @@ def sper_corrcoef(targets, predictions):
     return 100 * sc.stats.spearmanr(targets, predictions)[0]
 
 
+def get_model_features(df, batch_size, encodings, model, embarray):
+    """ Send sentence token encodings through model and return ndarray of embeddings for each sentence
+    and each token."""
+    i = 0
+    while i < len(df):
+        lower = i
+        upper = min(i+batch_size, len(df))
+        output = model(np.asarray(encodings["input_ids"][lower:upper], dtype="int32"),
+                       attention_mask=np.asarray(
+                           encodings["attention_mask"][lower:upper], dtype="int32"),
+                       token_type_ids=np.asarray(encodings["token_type_ids"][lower:upper], dtype="int32"))[0]
+
+        embarray[lower:upper, :, :] = np.asarray(output)
+        i += batch_size
+        print(i)
+        if i % 100 == 0:
+            clear_output()
+
+    return embarray
+
+
+def flatten_pooling(inp_representations, representation_dev):
+    """ calculating sentence representations by concatenating token representations."""
+    max_pad = representation_dev[0].shape[0]
+    emb_len = representation_dev[0].shape[1]
+    sent_representations = np.zeros(
+        (len(representation_dev), max_pad*emb_len), dtype=np.float32)
+    for i in range(len(representation_dev)):
+        sent_representations[i, :] = inp_representations[i *
+                                                         max_pad:i*max_pad+max_pad].flatten()
+    return sent_representations
+
+
 def mean_pooling(inp_representations, representation_dev):
     """ calculating sentence representations by averaging over the tokens."""
 
     sum_index = 0
     sent_representations = []
     for i in range(len(representation_dev)):
+        # sanity check
         if len(representation_dev[i]) == 0:
             sent_representations.append(
                 np.zeros(inp_representations[0].shape[0], dtype=np.float32))
@@ -80,9 +114,12 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
                     isotropic representations (n_samples, n_dimension)
 
               """
-
-    centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
-                                      missing='warn', check_finite=True)
+    label = []
+    if n_cluster != 1:
+        centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
+                                          missing='warn', check_finite=True)
+    else:
+        label = np.zeros(len(representations), dtype=np.int32)
     cluster_mean = []
     for i in range(max(label)+1):
         sum = np.zeros([1, emb_length])
@@ -111,7 +148,8 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
 
     cluster_representations2 = np.array(cluster_representations2)
 
-    model = PCA()
+    print("start PCA")
+    model = PCA(svd_solver="randomized")
     post_rep = np.zeros((representations.shape[0], representations.shape[1]))
 
     for i in range(n_cluster):

@@ -11,3 +11,6 @@ image/
 *.npy
 __pycache__/
 res.txt
+*.joblib
+*.jsonl
+submissions/
