@@ -5,6 +5,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import PCA
 import math as mt
 import scipy as sc
+from copy import deepcopy
+from sklearn.neural_network import MLPClassifier
 
 
 def sper_corrcoef(targets, predictions):
@@ -33,32 +35,32 @@ def get_model_features(df, batch_size, encodings, model, embarray):
     return embarray
 
 
-def flatten_pooling(inp_representations, representation_dev):
+def flatten_pooling(word_representations, sentences_full_rep):
     """ calculating sentence representations by concatenating token representations."""
-    max_pad = representation_dev[0].shape[0]
-    emb_len = representation_dev[0].shape[1]
+    max_pad = sentences_full_rep[0].shape[0]
+    emb_len = sentences_full_rep[0].shape[1]
     sent_representations = np.zeros(
-        (len(representation_dev), max_pad*emb_len), dtype=np.float32)
-    for i in range(len(representation_dev)):
-        sent_representations[i, :] = inp_representations[i *
-                                                         max_pad:i*max_pad+max_pad].flatten()
+        (len(sentences_full_rep), max_pad*emb_len), dtype=np.float32)
+    for i in range(len(sentences_full_rep)):
+        sent_representations[i, :] = word_representations[i *
+                                                          max_pad:i*max_pad+max_pad].flatten()
     return sent_representations
 
 
-def mean_pooling(inp_representations, representation_dev):
+def mean_pooling(word_representations, sentences_full_rep):
     """ calculating sentence representations by averaging over the tokens."""
 
     sum_index = 0
     sent_representations = []
-    for i in range(len(representation_dev)):
+    for i in range(len(sentences_full_rep)):
         # sanity check
-        if len(representation_dev[i]) == 0:
+        if len(sentences_full_rep[i]) == 0:
             sent_representations.append(
-                np.zeros(inp_representations[0].shape[0], dtype=np.float32))
+                np.zeros(word_representations[0].shape[0], dtype=np.float32))
             continue
         sent_representations.append(np.mean(
-            inp_representations[sum_index: sum_index + (len(representation_dev[i]))], axis=0))
-        sum_index = sum_index + len(representation_dev[i])
+            word_representations[sum_index: sum_index + (len(sentences_full_rep[i]))], axis=0))
+        sum_index = sum_index + len(sentences_full_rep[i])
 
     return sent_representations
 
@@ -171,6 +173,35 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
     return post_rep
 
 
+def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev):
+    """ Get the best MLP classifier based on validation set score in a specific epoch.
+        Inputs:
+            epochs: number of epochs to train for
+            X_tr: training set input - numpy array of size (n,m)
+            Y_tr: training set labels - numpy array of size (n,)
+            X_dev: validation set input - numpy array of size (k,m)
+            Y_dev: validation set labels - numpy array of size (k,)
+        Outputs:
+            clf_best: best MLP classifier
+            scores: all epochs MLP classifier scores on validation set.
+    """
+    clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=100, verbose=False,
+                        early_stopping=False, activation="relu", solver="adam", learning_rate_init=5e-3)
+    clf_best = None
+    score_best = 0
+    scores = []
+    for i in range(epochs):
+        clf.partial_fit(X_tr, Y_tr, classes=[0, 1])
+        score = clf.score(X_dev, Y_dev)
+        print("epoch " + str(i+1) + ", score: " + str(score))
+        scores.append(score)
+        if score > score_best:
+            score_best = score
+            clf_best = deepcopy(clf)
+
+    return clf_best, scores
+
+
 def global_method(representations, n_pc: int, emb_length):
     """ Improving Isotropy of input representations using cluster-based method
         Args: 
@@ -188,6 +219,16 @@ def global_method(representations, n_pc: int, emb_length):
 
 
 def get_representations(data_, tokenizer, model, emb_length):
+    """ Get sentence full representations for STS data.
+        Args:
+            inputs:
+                data_: dataframe with raw sentences in 'sentence1' and 'sentence2' columns
+                tokenizer: model tokenizer from transformers library
+                model: model from transformers library
+                emb_length: dimensionality of single token embedding of used model (output layer size)
+            output:
+                sentences: list of sentences embeddings (2*len(data_), num_tokens_in_sentnce, emb_length)
+            """
     sentences = []
     for i in range(len(data_)):
         print(i)
@@ -228,6 +269,7 @@ def get_representations(data_, tokenizer, model, emb_length):
 
 
 def getWords(sentences):
+    """ Get words (tokens) representations in a list by removing the sentences axis. """
     words = []
     for i in range(len(sentences)):
         for j in range(len(sentences[i])):

@@ -10,7 +10,7 @@ README_old.md
 image/
 *.npy
 __pycache__/
-res.txt
+res*.txt
 *.joblib
 *.jsonl
 submissions/
