@@ -7,6 +7,7 @@ import math as mt
 import scipy as sc
 from copy import deepcopy
 from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import matthews_corrcoef
 
 
 def sper_corrcoef(targets, predictions):
@@ -173,7 +174,7 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
     return post_rep
 
 
-def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev):
+def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev, scorer=""):
     """ Get the best MLP classifier based on validation set score in a specific epoch.
         Inputs:
             epochs: number of epochs to train for
@@ -188,11 +189,15 @@ def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev):
     clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=100, verbose=False,
                         early_stopping=False, activation="relu", solver="adam", learning_rate_init=5e-3)
     clf_best = None
-    score_best = 0
+    score_best = -1
     scores = []
     for i in range(epochs):
         clf.partial_fit(X_tr, Y_tr, classes=[0, 1])
-        score = clf.score(X_dev, Y_dev)
+        score = -1
+        if scorer == "matthew":
+            score = matthews_corrcoef(Y_dev, clf.predict(X_dev))
+        else:
+            score = clf.score(X_dev, Y_dev)
         print("epoch " + str(i+1) + ", score: " + str(score))
         scores.append(score)
         if score > score_best:
