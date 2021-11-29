@@ -123,6 +123,7 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
                                           missing='warn', check_finite=True)
     else:
         label = np.zeros(len(representations), dtype=np.int32)
+    # calculate cluster mean embedding
     cluster_mean = []
     for i in range(max(label)+1):
         sum = np.zeros([1, emb_length])
@@ -155,6 +156,7 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
     model = PCA(svd_solver="randomized")
     post_rep = np.zeros((representations.shape[0], representations.shape[1]))
 
+    # Can return errors if n_cluster > number of datapoints in smallest cluster. No issues if empty cluster however.
     for i in range(n_cluster):
         model.fit(np.array(cluster_representations2[i]).reshape(
             (-1, emb_length)))
@@ -174,7 +176,7 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
     return post_rep
 
 
-def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev, scorer=""):
+def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev, scorer="", random_state=None):
     """ Get the best MLP classifier based on validation set score in a specific epoch.
         Inputs:
             epochs: number of epochs to train for
@@ -187,7 +189,7 @@ def get_best_classifier(epochs, X_tr, Y_tr, X_dev, Y_dev, scorer=""):
             scores: all epochs MLP classifier scores on validation set.
     """
     clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=100, verbose=False,
-                        early_stopping=False, activation="relu", solver="adam", learning_rate_init=5e-3)
+                        early_stopping=False, activation="relu", solver="adam", learning_rate_init=5e-3, random_state=random_state)
     clf_best = None
     score_best = -1
     scores = []
