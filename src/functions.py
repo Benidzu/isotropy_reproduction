@@ -103,6 +103,53 @@ def isotropy(representations):
     return isotropy
 
 
+def cluster_and_zero_mean(representations, n_cluster: int, emb_length):
+    """ Improving Isotropy of input representations by clustering and zero-centering
+    Args: 
+            inputs:
+                representations: 
+                    input representations numpy array(n_samples, n_dimension)
+                n_cluster: 
+                    the number of clusters
+            output:
+                isotropic representations (n_samples, n_dimension)
+            """
+    label = []
+    if n_cluster != 1:
+        centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
+                                          missing='warn', check_finite=True)
+    else:
+        label = np.zeros(len(representations), dtype=np.int32)
+    # calculate cluster mean embedding
+    cluster_mean = []
+    for i in range(max(label)+1):
+        sum = np.zeros([1, emb_length])
+        for j in np.nonzero(label == i)[0]:
+            sum = np.add(sum, representations[j])
+        cluster_mean.append(sum/len(label[label == i]))
+
+    zero_mean_representation = []
+    for i in range(len(representations)):
+        zero_mean_representation.append(
+            (representations[i])-cluster_mean[label[i]])
+
+    cluster_representations = {}
+    for i in range(n_cluster):
+        cluster_representations.update({i: {}})
+        for j in range(len(representations)):
+            if (label[j] == i):
+                cluster_representations[i].update(
+                    {j: zero_mean_representation[j]})
+
+    cluster_representations_all = []
+    for j in range(n_cluster):
+        # cluster_representations2.append([])
+        for key, value in cluster_representations[j].items():
+            cluster_representations_all.append(value)
+
+    return np.array(cluster_representations_all)
+
+
 def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
     """ Improving Isotropy of input representations using cluster-based method
         Args: 
@@ -273,6 +320,56 @@ def get_representations(data_, tokenizer, model, emb_length):
             clear_output()
 
     return sentences
+
+
+# def get_representations_all_layers(data_, tokenizer, model, emb_length):
+#     """ Get sentence full representations from all layers.
+#         Args:
+#             inputs:
+#                 data_: dataframe with raw sentences in 'sentence1' and 'sentence2' columns
+#                 tokenizer: model tokenizer from transformers library
+#                 model: model from transformers library
+#                 emb_length: dimensionality of single token embedding of used model (output layer size)
+#             output:
+#                 sentences: list of sentences embeddings (2*len(data_), num_tokens_in_sentnce, emb_length)
+#             """
+#     sentences = []
+#     for i in range(len(data_)):
+#         print(i)
+#         # First sentence
+#         inputs = tokenizer.encode(
+#             data_['sentence1'].iloc[i], add_special_tokens=True)
+#         inputs = np.asarray(inputs, dtype='int32').reshape((1, -1))
+
+#         # getting the representation of the last layer
+#         output = model(inputs)[0]
+#         output = np.asarray(output).reshape((-1, emb_length))
+
+#         # Removing CLS and SEP tokens
+#         idx = [0, len(output)-1]
+#         output = np.delete(output, idx, axis=0)
+#         output = np.asarray(output).reshape((-1, emb_length))
+
+#         sentences.append(output)
+
+#         # Second sentence
+#         inputs = tokenizer.encode(
+#             data_['sentence2'].iloc[i], add_special_tokens=True)
+#         inputs = np.asarray(inputs, dtype='int32').reshape((1, -1))
+
+#         output = model(inputs)[0]
+#         output = np.asarray(output).reshape((-1, emb_length))
+
+#         # Removing CLS and SEP tokens
+#         idx = [0, len(output)-1]
+#         output = np.delete(output, idx, axis=0)
+#         output = np.asarray(output).reshape((-1, emb_length))
+
+#         sentences.append(output)
+#         if i % 10 == 0:
+#             clear_output()
+
+#     return sentences
 
 
 def getWords(sentences):
