@@ -1,6 +1,7 @@
 .vscode/
 .ipynb_checkpoints
-data/
+data/*
+!data/.gitkeep
 src/Enhancement.ipynb
 src/*.csv
 src/*.txt
