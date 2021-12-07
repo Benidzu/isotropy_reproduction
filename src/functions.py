@@ -83,8 +83,7 @@ def isotropy(representations):
     """Calculating isotropy of embedding space based on Eq.2
            arg:
               representations (n_samples, n_dimensions)
-            """
-
+    """
     eig_values, eig_vectors = np.linalg.eig(np.matmul(np.transpose(representations),
                                                       representations))
     max_f = -mt.inf
@@ -113,7 +112,7 @@ def cluster_and_zero_mean(representations, n_cluster: int, emb_length):
                     the number of clusters
             output:
                 isotropic representations (n_samples, n_dimension)
-            """
+    """
     label = []
     if n_cluster != 1:
         centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
@@ -162,8 +161,7 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
                       the number of directions to be discarded
               output:
                     isotropic representations (n_samples, n_dimension)
-
-              """
+    """
     label = []
     if n_cluster != 1:
         centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
@@ -266,7 +264,7 @@ def global_method(representations, n_pc: int, emb_length):
                       the number of directions to be discarded
               output:
                     improved representations using global method (n_samples, n_dimension)
-              """
+    """
 
     post_rep = cluster_based(representations, 1, n_pc, emb_length)
     return post_rep
@@ -282,7 +280,7 @@ def get_representations(data_, tokenizer, model, emb_length):
                 emb_length: dimensionality of single token embedding of used model (output layer size)
             output:
                 sentences: list of sentences embeddings (2*len(data_), num_tokens_in_sentnce, emb_length)
-            """
+    """
     sentences = []
     for i in range(len(data_)):
         print(i)
@@ -320,57 +318,6 @@ def get_representations(data_, tokenizer, model, emb_length):
             clear_output()
 
     return sentences
-
-
-# def get_representations_all_layers(data_, tokenizer, model, emb_length):
-#     """ Get sentence full representations from all layers.
-#         Args:
-#             inputs:
-#                 data_: dataframe with raw sentences in 'sentence1' and 'sentence2' columns
-#                 tokenizer: model tokenizer from transformers library
-#                 model: model from transformers library
-#                 emb_length: dimensionality of single token embedding of used model (output layer size)
-#             output:
-#                 sentences: list of sentences embeddings (2*len(data_), num_tokens_in_sentnce, emb_length)
-#             """
-#     sentences = []
-#     for i in range(len(data_)):
-#         print(i)
-#         # First sentence
-#         inputs = tokenizer.encode(
-#             data_['sentence1'].iloc[i], add_special_tokens=True)
-#         inputs = np.asarray(inputs, dtype='int32').reshape((1, -1))
-
-#         # getting the representation of the last layer
-#         output = model(inputs)[0]
-#         output = np.asarray(output).reshape((-1, emb_length))
-
-#         # Removing CLS and SEP tokens
-#         idx = [0, len(output)-1]
-#         output = np.delete(output, idx, axis=0)
-#         output = np.asarray(output).reshape((-1, emb_length))
-
-#         sentences.append(output)
-
-#         # Second sentence
-#         inputs = tokenizer.encode(
-#             data_['sentence2'].iloc[i], add_special_tokens=True)
-#         inputs = np.asarray(inputs, dtype='int32').reshape((1, -1))
-
-#         output = model(inputs)[0]
-#         output = np.asarray(output).reshape((-1, emb_length))
-
-#         # Removing CLS and SEP tokens
-#         idx = [0, len(output)-1]
-#         output = np.delete(output, idx, axis=0)
-#         output = np.asarray(output).reshape((-1, emb_length))
-
-#         sentences.append(output)
-#         if i % 10 == 0:
-#             clear_output()
-
-#     return sentences
-
 
 def getWords(sentences):
     """ Get words (tokens) representations in a list by removing the sentences axis. """
