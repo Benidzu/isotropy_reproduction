@@ -8,6 +8,7 @@ import scipy as sc
 from copy import deepcopy
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import matthews_corrcoef
+from collections import Counter
 
 
 def sper_corrcoef(targets, predictions):
@@ -164,8 +165,15 @@ def cluster_based(representations, n_cluster: int, n_pc: int, emb_length):
     """
     label = []
     if n_cluster != 1:
-        centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
+        represented = False
+        while not represented:
+            represented = True
+            centroid, label = clst.vq.kmeans2(representations, n_cluster, minit='points',
                                           missing='warn', check_finite=True)
+            counts = Counter(label)
+            for val in counts.values():
+                if val < n_pc:
+                    represented = False
     else:
         label = np.zeros(len(representations), dtype=np.int32)
     # calculate cluster mean embedding
